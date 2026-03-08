@@ -13,7 +13,6 @@ export default {
     if (token != null) {
       headers.authorization = "Bearer " + token;
     }
-
     return instance({
       method,
       headers: headers,
@@ -25,6 +24,7 @@ export default {
       })
       .catch((error) => {
         console.error(error);
+        throw error;
       });
   },
   getQuizInfo() {
@@ -39,8 +39,9 @@ export default {
   postParticipation(participant) {
     return this.call("post", "participations", participant);
   },
-  login(credentials) {
-    return this.call("post", "login", credentials);
+  // FIX 1: on envoie bien { password } et non le string brut
+  login(password) {
+    return this.call("post", "login", { password });
   },
   postQuestion(question, token) {
     return this.call("post", "questions", question, token);

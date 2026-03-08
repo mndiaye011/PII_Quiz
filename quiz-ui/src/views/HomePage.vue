@@ -1,80 +1,33 @@
 <template>
-  <div class="container mt-5 d-flex justify-content-between">
-
-
-    <!-- Tableau des scores à gauche -->
-    <div class="scores-container flex-grow-1">
-      <div class="welcome-container">
-        <h1 class="mb-8 text-center text-uppercase display-4">Bienvenue dans le quiz!</h1>
-        <button class="btn btn-lg btn-outline-dark " type="button" @click="$router.push('start-new-quiz-page')">Démarrer
-          le quiz!</button>
-      </div>
-
-      <br><br>
-      <h2 class="text-uppercase text-center">Meilleurs scores</h2>
-      <div class="table-responsive">
-        <table class="table table-striped table-hover border-dark">
-          <thead class="thead-dark">
-            <tr>
-              <th scope="col">#</th>
-              <th scope="col">Pseudo</th>
-              <th scope="col">Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(scoreEntry, index) in registeredScores" :key="scoreEntry.date">
-              <th scope="row">{{ index + 1 }}</th>
-              <td>{{ scoreEntry.playerName }}</td>
-              <td>{{ scoreEntry.score }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+  <div class="page-center fade-up">
+    <div class="hero">
+      <div class="hero-emoji">🧠</div>
+      <h1 class="hero-title">Quiz Cognitique</h1>
+      <p class="hero-sub">Teste tes connaissances en culture générale</p>
+      <button class="btn-navy hero-btn" @click="$router.push('/start-new-quiz-page')">
+        Démarrer le quiz !
+      </button>
     </div>
 
-
+    <div class="scores-section" v-if="registeredScores.length > 0">
+      <h2 class="scores-title">🏆 Meilleurs scores</h2>
+      <div class="scores-list">
+        <div
+          v-for="(entry, index) in registeredScores.slice(0, 5)"
+          :key="entry.date"
+          class="score-row"
+        >
+          <span class="rank">{{ medals[index] || (index + 1) }}</span>
+          <span class="name">{{ entry.playerName }}</span>
+          <span class="score">{{ entry.score }} pts</span>
+        </div>
+      </div>
+    </div>
+    <p v-else class="no-scores">Sois le premier à entrer dans le classement !</p>
   </div>
 </template>
 
-
-
-<style>
-.container {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  /* Assure que les conteneurs restent alignés en haut sur de petits écrans */
-}
-
-.scores-container {
-  flex: 1;
-  /* Prend la moitié de l'espace disponible */
-  padding: 20px;
-}
-
-.welcome-container {
-  flex: 1.5;
-  /* Prend une portion plus grande pour plus de visibilité */
-  padding: 20px;
-  background-color: #f8f9fa;
-  /* Couleur de fond pour mettre en avant la section */
-  border: 2px solid black;
-  /* Bordure pour renforcer le style Sketchy */
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.1);
-  /* Ombre portée pour le relief */
-  display: flex;
-  /* Activation de Flexbox pour le centrage */
-  flex-direction: column;
-  /* Les enfants sont empilés verticalement */
-  justify-content: center;
-  /* Centrage vertical des enfants */
-  align-items: center;
-  /* Centrage horizontal des enfants */
-}
-</style>
-
 <script>
-
 import quizApiService from "@/services/QuizApiService";
 import participationStorageService from "@/services/ParticipationStorageService";
 
@@ -83,15 +36,84 @@ export default {
   data() {
     return {
       registeredScores: [],
+      medals: ['🥇', '🥈', '🥉'],
     };
   },
-
   async created() {
-
     let response = await quizApiService.getQuizInfo();
     this.registeredScores = response.data.scores;
     participationStorageService.saveTotalQuestions(response.data.size);
-
   }
 };
 </script>
+
+<style scoped>
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+  margin-bottom: 48px;
+}
+.hero-emoji {
+  font-size: 120px;
+  line-height: 1;
+  margin-bottom: 8px;
+  filter: drop-shadow(0 8px 24px rgba(18,18,42,0.1));
+  animation: bob 3s ease-in-out infinite;
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+.hero-title {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--text-dark);
+  letter-spacing: -0.5px;
+}
+.hero-sub {
+  color: var(--text-mid);
+  font-size: 15px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+.hero-btn { max-width: 360px; font-size: 17px; padding: 16px 32px; }
+
+.scores-section {
+  width: 100%;
+  max-width: 400px;
+}
+.scores-title {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  margin-bottom: 14px;
+  text-align: center;
+}
+.scores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.score-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--off-white);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.rank { font-size: 18px; width: 28px; text-align: center; flex-shrink: 0; }
+.name { flex: 1; font-weight: 700; font-size: 14px; color: var(--text-dark); }
+.score { font-weight: 800; font-size: 14px; color: var(--navy); }
+
+.no-scores {
+  color: var(--text-light);
+  font-size: 14px;
+  font-style: italic;
+  text-align: center;
+}
+</style>
