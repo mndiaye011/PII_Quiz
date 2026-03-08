@@ -4,15 +4,12 @@
       <nav>
         <div class="nav-links">
           <router-link to="/" class="nav-item">
-            <span class="nav-icon">🏠</span>
             <span>Home</span>
           </router-link>
           <router-link to="/admin" class="nav-item">
-            <span class="nav-icon">✏️</span>
             <span>Admin</span>
           </router-link>
           <router-link to="/about" class="nav-item">
-            <span class="nav-icon">💡</span>
             <span>About</span>
           </router-link>
         </div>

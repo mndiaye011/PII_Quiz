@@ -7,11 +7,11 @@
     </div>
     <div class="about-sections">
       <div class="section-card card">
-        <h2>🧠 Qu'est-ce que ce projet ?</h2>
+        <h2> Qu'est-ce que ce projet ?</h2>
         <p>Ce projet est une application de quiz interactif axée sur la culture générale et les sciences cognitiques. Conçu pour tester et enrichir vos connaissances, il offre une expérience ludique et engageante.</p>
       </div>
       <div class="section-card card">
-        <h2>✏️ Auteurs</h2>
+        <h2> Auteurs</h2>
         <div class="authors">
           <div class="author-row">
             <span class="author-avatar">👤</span>
@@ -23,7 +23,7 @@
         </div>
       </div>
       <div class="section-card card">
-        <h2>🎯 Pourquoi ce projet ?</h2>
+        <h2> Pourquoi ce projet ?</h2>
         <p>Projet étudiant dans le cadre de la matière développement web. L'objectif est de répondre aux besoins du cahier des charges et de créer une application scalable.</p>
       </div>
     </div>
