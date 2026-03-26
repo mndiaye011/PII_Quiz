@@ -9,6 +9,15 @@
         <label class="field-label">Position</label>
         <input class="input-field" type="number" v-model="currentQuestion.position" :max="totalQuestion + 1" min="1" />
       </div>
+      <div class="field">
+        <label class="field-label">Quiz associé</label>
+        <select class="input-field" v-model="currentQuestion.quizId">
+          <option :value="null">— Aucun quiz —</option>
+          <option v-for="quiz in quizzes" :key="quiz.id" :value="quiz.id">
+            {{ quiz.name }}
+          </option>
+        </select>
+      </div>
     </div>
     <div class="field">
       <label class="field-label">Texte de la question</label>
@@ -66,9 +75,11 @@ export default {
       currentQuestion: {
         title: '', text: '', image: '', position: 1,
         possibleAnswers: [{ text: '', isCorrect: false }, { text: '', isCorrect: false }],
+        quizId: null,
       },
       selectedAnswer: 0,
       letters: ['A', 'B', 'C', 'D', 'E', 'F'],
+      quizzes: [],
     };
   },
   methods: {
@@ -100,6 +111,8 @@ export default {
   },
   async created() {
     let response = await quizApiService.getQuizInfo();
+    const quizzesRes = await quizApiService.getQuizzes();
+    this.quizzes = quizzesRes.data.quizzes;
     this.totalQuestion = response.data.size;
     if (this.question) {
       this.currentQuestion = { ...this.question };
@@ -111,7 +124,7 @@ export default {
 
 <style scoped>
 .edition-form { display: flex; flex-direction: column; gap: 16px; }
-.fields-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; }
+.fields-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 12px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field-label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-mid); }
 .image-preview {

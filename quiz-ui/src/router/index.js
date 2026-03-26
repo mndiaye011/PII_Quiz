@@ -5,6 +5,7 @@ import QuestionPage from "../views/QuestionPage.vue";
 import ResultPage from "../views/ResultPage.vue";
 import AdminPage from "../views/AdminPage.vue";
 import AboutPage from "../views/AboutPage.vue";
+import QuizSelectionPage from "../views/QuizSelectionPage.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,6 +16,7 @@ const router = createRouter({
     { path: "/result", name: "result", component: ResultPage },
     { path: "/admin", name: "admin", component: AdminPage },
     { path: "/about", name: "about", component: AboutPage },
+    { path: "/select-quiz", name: "QuizSelection", component: QuizSelectionPage }
   ],
 });
 

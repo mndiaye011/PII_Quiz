@@ -4,7 +4,7 @@
       <div class="hero-emoji">🧠</div>
       <h1 class="hero-title">Quiz Cognitique</h1>
       <p class="hero-sub">Teste tes connaissances en culture générale</p>
-      <button class="btn-navy hero-btn" @click="$router.push('/start-new-quiz-page')">
+      <button class="btn-navy hero-btn" @click="$router.push('/select-quiz')">
         Démarrer le quiz !
       </button>
     </div>
@@ -117,3 +117,4 @@ export default {
   text-align: center;
 }
 </style>
+

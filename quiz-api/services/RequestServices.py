@@ -1,4 +1,4 @@
-from models.__init import Question
+from models.__init import Question, Answer
 from services.DBServices import DBServices
 from datetime import datetime
 
@@ -9,250 +9,220 @@ def get_connection():
     return dbConnection
 
 
-def verifyPosition(position):
-    '''
-    Verify if position is valid
-    '''
+# ── Quiz ──────────────────────────────────────────────────────
 
+def get_quizzes():
     dbConnection = get_connection()
-
-    result = dbConnection.executeSelectQuery(
-        f"SELECT * FROM Question WHERE position={str(position)};")
-
+    result = dbConnection.executeSelectQuery("SELECT * FROM Quiz ORDER BY id;")
     dbConnection.close()
-
-    if(len(result) <= 0):
-        return False
-
-    return True
-
-
-def post_question(json_object):
-    '''
-    Add a new question
-    '''
-
-    dbConnection = get_connection()
-
-    question = Question.deserialize(json_object)
-
-    dbConnection.executeTransactionQuery(
-        f"UPDATE Question SET position = position + 1 WHERE position >= {str(question.position)};")
-
-    questionRequest = f"INSERT INTO question (title, text, image, position) VALUES (\"{question.title}\", \"{question.text}\", \"{question.image }\", {str(question.position)});"
-    dbConnection.executeTransactionQuery(questionRequest)
-
-    result = dbConnection.executeSelectQuery(
-        "SELECT seq FROM sqlite_sequence WHERE name='Question';")
-
-    if(len(result) != 1):
-        raise Exception("Error while inserting question")
-
-    question.id = result[0]["seq"]
-
-    for answer in question.answers:
-        answerRequest = f"INSERT INTO answer (text, isCorrect, question_id) VALUES (\"{answer.text }\", {str(answer.correct)}, {str(question.id)});"
-        dbConnection.executeTransactionQuery(answerRequest)
-
-    dbConnection.close()
-
-
-def get_questions():
-    '''
-    Get all questions
-    '''
-
-    dbConnection = get_connection()
-
-    result = dbConnection.executeSelectQuery(
-        "SELECT * FROM Question ORDER BY position;")
-
-    if(len(result) <= 0):
-        raise Exception("No questions found")
-
-    for obj in result:
-        answers = dbConnection.executeSelectQuery(
-            f"SELECT text, isCorrect FROM Answer WHERE Answer.question_id = \"{str(obj['id'])}\";")
-
-        obj["possibleAnswers"] = answers
-
-        for answer in obj["possibleAnswers"]:
-            answer["isCorrect"] = bool(answer["isCorrect"])
-
-    dbConnection.close()
-
     return result
 
-
-def get_question(position):
-    '''
-    Get a question by position
-    '''
-
+def post_quiz(json_object):
     dbConnection = get_connection()
+    name = json_object['name'].replace('"', "'")
+    description = json_object.get('description', '').replace('"', "'")
+    dbConnection.executeTransactionQuery(
+        f'INSERT INTO Quiz (name, description) VALUES ("{name}", "{description}");'
+    )
+    dbConnection.close()
 
+def delete_quiz(quiz_id):
+    dbConnection = get_connection()
+    # Dissocie les questions du quiz sans les supprimer
+    dbConnection.executeTransactionQuery(
+        f"UPDATE Question SET quiz_id = NULL WHERE quiz_id = {str(quiz_id)};"
+    )
+    dbConnection.executeTransactionQuery(
+        f"DELETE FROM Quiz WHERE id = {str(quiz_id)};"
+    )
+    dbConnection.close()
+
+
+# ── Questions ─────────────────────────────────────────────────
+
+def verifyPosition(position):
+    dbConnection = get_connection()
     result = dbConnection.executeSelectQuery(
-        f"SELECT * FROM Question WHERE position={position};")
+        f"SELECT * FROM Question WHERE position={str(position)};")
+    dbConnection.close()
+    return len(result) > 0
 
-    if(len(result) != 1):
-        raise Exception("No questions found")
-
+def get_question_by_quiz(position, quiz_id):
+    dbConnection = get_connection()
+    result = dbConnection.executeSelectQuery(
+        f"SELECT * FROM Question WHERE position={position} AND quiz_id={str(quiz_id)};")
+    if len(result) != 1:
+        raise Exception("Question non trouvée")
     question = result[0]
     answers = dbConnection.executeSelectQuery(
-        f"SELECT text, isCorrect FROM Answer WHERE Answer.question_id = {str(question['id'])};")
-
-    dbConnection.close()
-
+        f"SELECT text, isCorrect FROM Answer WHERE question_id={str(question['id'])};")
+    for a in answers:
+        a["isCorrect"] = bool(a["isCorrect"])
     question["possibleAnswers"] = answers
-    for answer in question["possibleAnswers"]:
-        answer["isCorrect"] = bool(answer["isCorrect"])
-
+    dbConnection.close()
     return question
 
-
-def delete_question(position):
-    '''
-    Delete a question
-    '''
-
+def get_questions():
     dbConnection = get_connection()
+    result = dbConnection.executeSelectQuery(
+        "SELECT * FROM Question ORDER BY position;")
+    if len(result) <= 0:
+        return []
+    for obj in result:
+        answers = dbConnection.executeSelectQuery(
+            f"SELECT text, isCorrect FROM Answer WHERE question_id=\"{str(obj['id'])}\";")
+        obj["possibleAnswers"] = answers
+        for a in obj["possibleAnswers"]:
+            a["isCorrect"] = bool(a["isCorrect"])
+    dbConnection.close()
+    return result
+
+def get_question(position):
+    dbConnection = get_connection()
+    result = dbConnection.executeSelectQuery(
+        f"SELECT * FROM Question WHERE position={position};")
+    if len(result) != 1:
+        raise Exception("No questions found")
+    question = result[0]
+    answers = dbConnection.executeSelectQuery(
+        f"SELECT text, isCorrect FROM Answer WHERE question_id={str(question['id'])};")
+    for a in answers:
+        a["isCorrect"] = bool(a["isCorrect"])
+    question["possibleAnswers"] = answers
+    dbConnection.close()
+    return question
+
+def post_question(json_object):
+    dbConnection = get_connection()
+    question = Question.deserialize(json_object)
+    # Récupère quiz_id si fourni
+    quiz_id = json_object.get('quizId', None)
+    quiz_id_sql = str(quiz_id) if quiz_id else "NULL"
+
+    # Décale seulement les questions du même quiz
+    if quiz_id:
+        dbConnection.executeTransactionQuery(
+            f"UPDATE Question SET position = position + 1 WHERE position >= {str(question.position)} AND quiz_id = {quiz_id_sql};"
+        )
+    else:
+        dbConnection.executeTransactionQuery(
+            f"UPDATE Question SET position = position + 1 WHERE position >= {str(question.position)};"
+        )
 
     dbConnection.executeTransactionQuery(
-        f"DELETE FROM Question WHERE position={str(position)};")
-
-    dbConnection.executeTransactionQuery(
-        f"UPDATE Question SET position = position - 1 WHERE position >= {str(position)};")
-
+        f'INSERT INTO Question (title, text, image, position, quiz_id) VALUES '
+        f'("{question.title}", "{question.text}", "{question.image}", '
+        f'{str(question.position)}, {quiz_id_sql});'
+    )
+    result = dbConnection.executeSelectQuery(
+        "SELECT seq FROM sqlite_sequence WHERE name='Question';")
+    if len(result) != 1:
+        raise Exception("Error while inserting question")
+    question.id = result[0]["seq"]
+    for answer in question.answers:
+        dbConnection.executeTransactionQuery(
+            f'INSERT INTO Answer (text, isCorrect, question_id) VALUES '
+            f'("{answer.text}", {str(answer.correct)}, {str(question.id)});'
+        )
     dbConnection.close()
 
+def delete_question(position):
+    dbConnection = get_connection()
+    dbConnection.executeTransactionQuery(
+        f"DELETE FROM Question WHERE position={str(position)};")
+    dbConnection.executeTransactionQuery(
+        f"UPDATE Question SET position = position - 1 WHERE position >= {str(position)};")
+    dbConnection.close()
 
 def put_question(position, json_obj):
-    '''
-    Update a question with the new values and move is position if needed
-    '''
-
     question = Question.deserialize(json_obj)
     dbConnection = get_connection()
     position = int(position)
-
     result = dbConnection.executeSelectQuery(
         f"SELECT id FROM Question WHERE position={str(position)};")
-
-    if(len(result) != 1):
+    if len(result) != 1:
         raise Exception("No questions found")
-
     id = result[0]['id']
-
-    # update position of other question
-    if(position != question.position):
-
+    if position != question.position:
         sign = 1 if question.position > position else -1
-
-        while(position != question.position):
+        while position != question.position:
             dbConnection.executeTransactionQuery(
                 f"UPDATE Question SET position=position + {str(-sign)} WHERE position={str(position+sign)};")
-
             position += sign
-
-    # update question where position = position
     dbConnection.executeTransactionQuery(
-        f"UPDATE Question SET title= \"{question.title}\", text= \"{question.text}\", image= \"{question.image}\", position={str(question.position)} WHERE id={str(id)};")
-
-    # update answers by delete and insert
+        f'UPDATE Question SET title="{question.title}", text="{question.text}", '
+        f'image="{question.image}", position={str(question.position)} WHERE id={str(id)};'
+    )
     dbConnection.executeTransactionQuery(
         f"DELETE FROM Answer WHERE question_id={str(id)};")
-
     for answer in question.answers:
         dbConnection.executeTransactionQuery(
-            f"INSERT INTO Answer (question_id, text, isCorrect) VALUES ({str(id)}, \"{answer.text}\", {str(answer.correct)});")
-
+            f'INSERT INTO Answer (question_id, text, isCorrect) VALUES '
+            f'({str(id)}, "{answer.text}", {str(answer.correct)});'
+        )
     dbConnection.close()
 
 
-def get_user_infos():
-    '''
-    Get all user infos
-    '''
+# ── Quiz Info ─────────────────────────────────────────────────
 
+def get_user_infos(quiz_id=None):
     dbConnection = get_connection()
-
-    result = dbConnection.executeSelectQuery(
-        "SELECT COUNT(*) as nbQuestion FROM Question;")
-
-    if(len(result) <= 0):
-        raise Exception("No questions found")
-
-    nbQuestion = result[0]['nbQuestion']
-
-    # get participants info
-    result = dbConnection.executeSelectQuery(
+    if quiz_id:
+        result = dbConnection.executeSelectQuery(
+            f"SELECT COUNT(*) as nbQuestion FROM Question WHERE quiz_id={str(quiz_id)};")
+    else:
+        result = dbConnection.executeSelectQuery(
+            "SELECT COUNT(*) as nbQuestion FROM Question;")
+    nbQuestion = result[0]['nbQuestion'] if result else 0
+    scores = dbConnection.executeSelectQuery(
         "SELECT * FROM Participant ORDER BY score DESC;")
-
     dbConnection.close()
+    return nbQuestion, scores
 
-    return nbQuestion, result
 
+# ── Participations ────────────────────────────────────────────
 
 def post_answers(json_object):
-    '''
-    Save to the database the answers of the user and create the user
-    '''
-
     playerName = json_object['playerName']
     answers = json_object['answers']
+    quiz_id = json_object.get('quizId', None)
 
     dbConnection = get_connection()
+    if quiz_id:
+        result = dbConnection.executeSelectQuery(
+            f"SELECT id FROM Question WHERE quiz_id={str(quiz_id)} ORDER BY position;")
+    else:
+        result = dbConnection.executeSelectQuery(
+            "SELECT id FROM Question ORDER BY position;")
 
-    result = dbConnection.executeSelectQuery(
-        "SELECT id FROM Question ORDER BY position;")
-
-    if(len(result) <= 0):
+    if len(result) <= 0:
         raise Exception("No questions found")
-
-    elif(len(result) != len(answers)):
-        raise IndexError(
-            "Number of answers is not the same as number of questions")
+    if len(result) != len(answers):
+        raise IndexError("Number of answers is not the same as number of questions")
 
     position_answers = []
     good_answers = []
-    for(i, obj) in enumerate(result):
-        id = obj['id']
-        # select answer
+    for i, obj in enumerate(result):
         resultAnswer = dbConnection.executeSelectQuery(
-            f"SELECT * FROM Answer WHERE question_id={str(id)};")
-
-        if(len(resultAnswer) <= 0):
+            f"SELECT * FROM Answer WHERE question_id={str(obj['id'])};")
+        if len(resultAnswer) <= 0:
             raise Exception("No answers found")
-
-        for(j, answer) in enumerate(resultAnswer):
-            if(answer['isCorrect'] == 1):
-                position_answers.append(j+1)
-                if(j+1 == answers[i]):
-                    good_answers.append(True)
-                else:
-                    good_answers.append(False)
+        for j, answer in enumerate(resultAnswer):
+            if answer['isCorrect'] == 1:
+                position_answers.append(j + 1)
+                good_answers.append(j + 1 == answers[i])
                 break
 
-    # count goodAnswers with lambda
     score = len(list(filter(lambda x: x, good_answers)))
-    now = datetime.now()
-    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
-
+    dt_string = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     dbConnection.executeTransactionQuery(
-        f"INSERT INTO Participant (playerName, score, date) VALUES (\"{playerName}\", {str(score)}, \"{dt_string}\");")
-
+        f'INSERT INTO Participant (playerName, score, date) VALUES '
+        f'("{playerName}", {str(score)}, "{dt_string}");'
+    )
     dbConnection.close()
-
     return good_answers, position_answers, score, playerName
 
-
 def delete_participants():
-    '''
-    Delete all participants
-    '''
-
     dbConnection = get_connection()
-
     dbConnection.executeTransactionQuery("DELETE FROM Participant;")
-
     dbConnection.close()

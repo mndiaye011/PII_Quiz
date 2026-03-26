@@ -7,16 +7,114 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+# ── Initialise la table Quiz au démarrage ─────────────────────
+with app.app_context():
+    from services.DBServices import DBServices
+    db = DBServices()
+    db.connection()
+    db.create_tables()
+    db.close()
+
+# ── Quiz ──────────────────────────────────────────────────────
+
+@app.route('/quizzes', methods=['GET'])
+def GetQuizzes():
+    quizzes = RequestServices.get_quizzes()
+    return {"quizzes": quizzes}, 200
+
+@app.route('/quizzes', methods=['POST'])
+def PostQuiz():
+    if not AuthServices.verify_token(request.headers):
+        return '', 401
+    try:
+        RequestServices.post_quiz(request.get_json())
+    except sqlite3.IntegrityError:
+        return 'Un quiz avec ce nom existe déjà', 409
+    except Exception as e:
+        return str(e), 500
+    return '', 200
+
+@app.route('/quizzes/<quiz_id>', methods=['DELETE'])
+def DeleteQuiz(quiz_id):
+    if not AuthServices.verify_token(request.headers):
+        return '', 401
+    try:
+        RequestServices.delete_quiz(quiz_id)
+    except Exception as e:
+        return str(e), 500
+    return '', 204
+
+# ── Quiz Info ─────────────────────────────────────────────────
+
 @app.route('/quiz-info', methods=['GET'])
 def GetQuizInfo():
-
-    nb_question, scores = RequestServices.get_user_infos()
+    quiz_id = request.args.get('quizId')
+    nb_question, scores = RequestServices.get_user_infos(quiz_id)
     return {'size': nb_question, 'scores': scores}, 200
 
+# ── Questions ─────────────────────────────────────────────────
+
+@app.route('/questions', methods=['GET'])
+def GetQuestions():
+    question_list = RequestServices.get_questions()
+    return {"questions": question_list, "size": len(question_list)}, 200
+
+@app.route('/questions/<position>', methods=['GET'])
+def GetQuestion(position):
+    quiz_id = request.args.get('quizId')
+    try:
+        if quiz_id:
+            question = RequestServices.get_question_by_quiz(position, quiz_id)
+        else:
+            if not RequestServices.verifyPosition(position):
+                return 'position not found', 404
+            question = RequestServices.get_question(position)
+    except Exception as e:
+        return str(e), 404
+    return question, 200
+
+@app.route('/questions/<position>', methods=['DELETE'])
+def DeleteQuestion(position):
+    if not AuthServices.verify_token(request.headers):
+        return '', 401
+    if not RequestServices.verifyPosition(position):
+        return 'Position not found', 404
+    try:
+        RequestServices.delete_question(position)
+    except Exception as e:
+        return str(e), 500
+    return '', 204
+
+@app.route('/questions/<position>', methods=['PUT'])
+def PutQuestion(position):
+    if not AuthServices.verify_token(request.headers):
+        return '', 401
+    if not RequestServices.verifyPosition(position):
+        return 'position not found', 404
+    try:
+        RequestServices.put_question(position, request.get_json())
+    except sqlite3.IntegrityError as e:
+        return str(e), 409
+    except Exception as e:
+        return str(e), 500
+    return '', 204
+
+@app.route('/questions', methods=['POST'])
+def PostQuestion():
+    if not AuthServices.verify_token(request.headers):
+        return '', 401
+    try:
+        RequestServices.post_question(request.get_json())
+    except sqlite3.IntegrityError as e:
+        return str(e), 409
+    except Exception as e:
+        return str(e), 500
+    return '', 200
+
+# ── Participations ────────────────────────────────────────────
 
 @app.route('/participations', methods=['POST'])
 def PostAnswers():
-
     try:
         good_answers, position_answers, score, player_name = RequestServices.post_answers(
             request.get_json())
@@ -26,9 +124,8 @@ def PostAnswers():
         return str(e), 409
     except Exception as e:
         return str(e), 500
-
     return {
-        'answersSummaries ': {
+        'answersSummaries': {
             'correctAnswerPosition': position_answers,
             'wasCorrect': good_answers
         },
@@ -36,97 +133,19 @@ def PostAnswers():
         'score': score
     }, 200
 
-
 @app.route('/participations', methods=['DELETE'])
 def DeleteParticipants():
-
     if not AuthServices.verify_token(request.headers):
         return '', 401
-
     try:
         RequestServices.delete_participants()
     except Exception as e:
         return str(e), 500
-
     return {}, 204
 
+# ── Login ─────────────────────────────────────────────────────
 
-@app.route('/questions', methods=['GET'])
-def GetQuestions():
-
-    question_list = RequestServices.get_questions()
-    return {"questions": question_list, "size": len(question_list)}, 200
-
-
-@ app.route('/questions/<position>', methods=['GET'])
-def GetQuestion(position):
-    if not RequestServices.verifyPosition(position):
-        return 'position not found', 404
-
-    try:
-        question = RequestServices.get_question(position)
-    except Exception as e:
-        return str(e), 500
-
-    return question, 200
-
-
-@ app.route('/questions/<position>', methods=['DELETE'])
-def DeleteQuestion(position):
-
-    if not AuthServices.verify_token(request.headers):
-        return '', 401
-
-    if not RequestServices.verifyPosition(position):
-        return 'Position not found', 404
-
-    try:
-        RequestServices.delete_question(position)
-    except Exception as e:
-        return str(e), 500
-
-    return '', 204
-
-
-@ app.route('/questions/<position>', methods=['PUT'])
-def PutQuestion(position):
-    if not AuthServices.verify_token(request.headers):
-        return '', 401
-
-    if not RequestServices.verifyPosition(position):
-        return 'position not found', 404
-
-    payload = request.get_json()
-
-    try:
-        RequestServices.put_question(position, payload)
-    except sqlite3.IntegrityError as e:
-        return str(e), 409
-    except Exception as e:
-        return str(e), 500
-
-    return '', 204
-
-
-@ app.route('/questions', methods=['POST'])
-def PostQuestion():
-
-    payload = request.get_json()
-
-    if not AuthServices.verify_token(request.headers):
-        return '', 401
-
-    try:
-        RequestServices.post_question(payload)
-    except sqlite3.IntegrityError as e:
-        return str(e), 409
-    except Exception as e:
-        return str(e), 500
-
-    return '', 200
-
-
-@ app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def Login():
     try:
         token_string = AuthServices.login(request.get_json()['password'])
@@ -134,8 +153,5 @@ def Login():
     except ValueError as e:
         return str(e), 401
 
-
 if __name__ == '__main__':
-
-    # use_reloader=True, debug=True
-    app.run()
+    app.run(debug=True)

@@ -76,10 +76,12 @@ export default {
       }
     },
     async loadQuestionByPosition() {
+      const quiz = participationStorageService.getSelectedQuiz();
+      const quizId = quiz ? quiz.id : null;
       this.completePercentage = ((this.currentQuestionPosition - 1) / this.totalNumberOfQuestion) * 100;
-      let response = await quizApiService.getQuestion(this.currentQuestionPosition);
+      let response = await quizApiService.getQuestion(this.currentQuestionPosition, quizId); // ← quizId ajouté
       this.currentQuestion = response.data;
-      this.startTimer(); // ← démarre le timer à chaque nouvelle question
+      this.startTimer();
     },
     async answerClickedHandler(index) {
       this.stopTimer(); // ← arrête le timer dès qu'une réponse est donnée
@@ -92,9 +94,11 @@ export default {
       }
     },
     async endQuiz() {
+      const quiz = participationStorageService.getSelectedQuiz(); // ← manquait
       let participant = {
         playerName: participationStorageService.getPlayerName(),
         answers: this.selectedAnswer,
+        quizId: quiz ? quiz.id : null,  // ← manquait
       };
       let response = await quizApiService.postParticipation(participant);
       participationStorageService.saveParticipationScore(response.data.score);

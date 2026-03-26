@@ -104,7 +104,9 @@ export default {
     },
   },
   async created() {
-    let response = await quizApiService.getQuizInfo();
+    const quiz = participationStorageService.getSelectedQuiz();  // ← ajout
+    const quizId = quiz ? quiz.id : null;                       // ← ajout
+    let response = await quizApiService.getQuizInfo(quizId);    // ← quizId ajouté
     participationStorageService.saveTotalQuestions(response.data.size);
     this.registeredScores = response.data.scores;
     this.score = participationStorageService.getParticipationScore();
@@ -204,3 +206,4 @@ export default {
 
 .actions { display: flex; flex-direction: column; gap: 10px; }
 </style>
+
