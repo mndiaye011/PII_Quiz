@@ -1,7 +1,7 @@
 <template>
   <div class="page-center fade-up">
     <div class="sel-hero">
-      <div class="sel-emoji">🎯</div>
+      <div class="sel-emoji">💪</div>
       <h1 class="sel-title">Choisir un Quiz</h1>
       <p class="sel-sub">Sélectionne un thème pour commencer</p>
     </div>

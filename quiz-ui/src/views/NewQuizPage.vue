@@ -19,7 +19,7 @@ function launchNewQuiz() {
 
 <template>
   <div class="page-center fade-up">
-    <div class="hero-emoji">😤</div>
+    <div class="hero-emoji">💪</div>
     <div class="form-card card">
       <h1 class="form-title">Prêt à relever le défi ?</h1>
       <p class="form-sub">Choisis un pseudo pour commencer</p>

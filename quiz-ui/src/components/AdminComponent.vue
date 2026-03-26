@@ -37,7 +37,7 @@
           :class="{ active: activeTab === 'quizzes' }"
           @click="activeTab = 'quizzes'"
         >
-          🎯 Quiz
+          📌 Quiz
         </button>
       </div>
 
