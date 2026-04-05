@@ -34,6 +34,7 @@
 import QuestionDisplay from './QuestionDisplay.vue';
 import participationStorageService from '@/services/ParticipationStorageService';
 import quizApiService from '@/services/QuizApiService';
+import userStorageService from '@/services/UserStorageService';
 
 const TIMER_SECONDS = 30; // ← change cette valeur pour ajuster la durée
 const CIRCUMFERENCE = 2 * Math.PI * 26; // 2πr avec r=26
@@ -94,31 +95,33 @@ export default {
       }
     },
     async endQuiz() {
-      const quiz = participationStorageService.getSelectedQuiz(); // ← manquait
+      const quiz = participationStorageService.getSelectedQuiz();
+      const user = userStorageService.getUser(); // ← ajout
       let participant = {
         playerName: participationStorageService.getPlayerName(),
         answers: this.selectedAnswer,
-        quizId: quiz ? quiz.id : null,  // ← manquait
+        quizId: quiz ? quiz.id : null,
+        userId: user ? user.id : null,  // ← ajout
       };
       let response = await quizApiService.postParticipation(participant);
       participationStorageService.saveParticipationScore(response.data.score);
       this.$router.push('/result');
     },
   },
-  async created() {
-    const stored = participationStorageService.getTotalQuestions();
-    if (stored) {
-      this.totalNumberOfQuestion = parseInt(stored);
-    } else {
-      const response = await quizApiService.getQuizInfo();
-      this.totalNumberOfQuestion = response.data.size;
-    }
-    this.loadQuestionByPosition();
-  },
-  // Important : stoppe le timer si on quitte la page
-  beforeUnmount() {
-    this.stopTimer();
-  },
+    async created() {
+      const stored = participationStorageService.getTotalQuestions();
+      if (stored) {
+        this.totalNumberOfQuestion = parseInt(stored);
+      } else {
+        const response = await quizApiService.getQuizInfo();
+        this.totalNumberOfQuestion = response.data.size;
+      }
+      this.loadQuestionByPosition();
+    },
+    // Important : stoppe le timer si on quitte la page
+    beforeUnmount() {
+      this.stopTimer();
+    },
 };
 </script>
 

@@ -17,8 +17,8 @@ class DBServices:
     def close(self):
         self.db_connection.close()
 
-    # ── NOUVEAU : crée la table Quiz + colonne quiz_id ────────
     def create_tables(self):
+        # Table Quiz
         self.db_connection.execute("""
             CREATE TABLE IF NOT EXISTS Quiz (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -26,13 +26,35 @@ class DBServices:
                 description TEXT DEFAULT ''
             );
         """)
-        # Ajoute quiz_id à Question si absente
+        # Table User (nouveau)
+        self.db_connection.execute("""
+            CREATE TABLE IF NOT EXISTS User (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL
+            );
+        """)
+        # Colonne quiz_id sur Question
         try:
             self.db_connection.execute(
                 "ALTER TABLE Question ADD COLUMN quiz_id INTEGER REFERENCES Quiz(id) ON DELETE SET NULL;"
             )
         except Exception:
-            pass  # colonne déjà existante
+            pass
+        # Colonne user_id sur Participant (nouveau)
+        try:
+            self.db_connection.execute(
+                "ALTER TABLE Participant ADD COLUMN user_id INTEGER REFERENCES User(id) ON DELETE SET NULL;"
+            )
+        except Exception:
+            pass
+        # Colonne quiz_id sur Participant (nouveau - pour l'historique)
+        try:
+            self.db_connection.execute(
+                "ALTER TABLE Participant ADD COLUMN quiz_id INTEGER REFERENCES Quiz(id) ON DELETE SET NULL;"
+            )
+        except Exception:
+            pass
         self.db_connection.commit()
 
     def dict_factory(self, row):

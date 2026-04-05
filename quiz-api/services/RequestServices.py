@@ -1,6 +1,7 @@
 from models.__init import Question, Answer
 from services.DBServices import DBServices
 from datetime import datetime
+import hashlib
 
 
 def get_connection():
@@ -8,6 +9,53 @@ def get_connection():
     dbConnection.connection()
     return dbConnection
 
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# ── Utilisateurs ──────────────────────────────────────────────
+
+def register_user(json_object):
+    username = json_object['username'].strip()
+    password = json_object['password']
+    if not username or not password:
+        raise ValueError("Champs manquants")
+    hashed = hash_password(password)
+    dbConnection = get_connection()
+    dbConnection.executeTransactionQuery(
+        f'INSERT INTO User (username, password) VALUES ("{username}", "{hashed}");'
+    )
+    result = dbConnection.executeSelectQuery(
+        f'SELECT id, username FROM User WHERE username="{username}";'
+    )
+    dbConnection.close()
+    return result[0]
+
+def login_user(json_object):
+    username = json_object['username'].strip()
+    password = json_object['password']
+    hashed = hash_password(password)
+    dbConnection = get_connection()
+    result = dbConnection.executeSelectQuery(
+        f'SELECT id, username FROM User WHERE username="{username}" AND password="{hashed}";'
+    )
+    dbConnection.close()
+    if not result:
+        raise ValueError("Identifiants incorrects")
+    return result[0]
+
+def get_user_history(user_id):
+    dbConnection = get_connection()
+    result = dbConnection.executeSelectQuery(
+        f"""SELECT p.id, p.score, p.date, p.playerName,
+            q.name as quizName, q.id as quizId,
+            (SELECT COUNT(*) FROM Question WHERE quiz_id = q.id) as totalQuestions
+            FROM Participant p
+            LEFT JOIN Quiz q ON p.quiz_id = q.id
+            WHERE p.user_id = {str(user_id)}
+            ORDER BY p.date DESC;"""
+    )
+    dbConnection.close()
+    return result
 
 # ── Quiz ──────────────────────────────────────────────────────
 
@@ -186,6 +234,7 @@ def post_answers(json_object):
     playerName = json_object['playerName']
     answers = json_object['answers']
     quiz_id = json_object.get('quizId', None)
+    user_id = json_object.get('userId', None)  # ← nouveau
 
     dbConnection = get_connection()
     if quiz_id:
@@ -215,9 +264,13 @@ def post_answers(json_object):
 
     score = len(list(filter(lambda x: x, good_answers)))
     dt_string = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+
+    # Sauvegarde avec user_id et quiz_id
+    user_id_sql = str(user_id) if user_id else "NULL"
+    quiz_id_sql = str(quiz_id) if quiz_id else "NULL"
     dbConnection.executeTransactionQuery(
-        f'INSERT INTO Participant (playerName, score, date) VALUES '
-        f'("{playerName}", {str(score)}, "{dt_string}");'
+        f'INSERT INTO Participant (playerName, score, date, user_id, quiz_id) VALUES '
+        f'("{playerName}", {str(score)}, "{dt_string}", {user_id_sql}, {quiz_id_sql});'
     )
     dbConnection.close()
     return good_answers, position_answers, score, playerName

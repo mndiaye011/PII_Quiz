@@ -30,4 +30,7 @@ export default {
   getQuizzes() { return this.call("get", "quizzes"); },
   postQuiz(quiz, token) { return this.call("post", "quizzes", quiz, token); },
   deleteQuiz(id, token) { return this.call("delete", `quizzes/${id}`, null, token); },
+  registerUser(data) { return this.call("post", "users/register", data); },
+  loginUser(data) { return this.call("post", "users/login", data); },
+  getUserHistory(userId) { return this.call("get", `users/${userId}/history`); },
 };

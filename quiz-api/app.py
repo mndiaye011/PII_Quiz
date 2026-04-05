@@ -15,6 +15,38 @@ with app.app_context():
     db.create_tables()
     db.close()
 
+# ── Utilisateurs ──────────────────────────────────────────────
+
+@app.route('/users/register', methods=['POST'])
+def RegisterUser():
+    try:
+        user = RequestServices.register_user(request.get_json())
+        return {"id": user['id'], "username": user['username']}, 201
+    except sqlite3.IntegrityError:
+        return 'Ce pseudo est déjà pris', 409
+    except ValueError as e:
+        return str(e), 400
+    except Exception as e:
+        return str(e), 500
+
+@app.route('/users/login', methods=['POST'])
+def LoginUser():
+    try:
+        user = RequestServices.login_user(request.get_json())
+        return {"id": user['id'], "username": user['username']}, 200
+    except ValueError as e:
+        return str(e), 401
+    except Exception as e:
+        return str(e), 500
+
+@app.route('/users/<user_id>/history', methods=['GET'])
+def GetUserHistory(user_id):
+    try:
+        history = RequestServices.get_user_history(user_id)
+        return {"history": history}, 200
+    except Exception as e:
+        return str(e), 500
+
 # ── Quiz ──────────────────────────────────────────────────────
 
 @app.route('/quizzes', methods=['GET'])

@@ -6,6 +6,8 @@ import ResultPage from "../views/ResultPage.vue";
 import AdminPage from "../views/AdminPage.vue";
 import AboutPage from "../views/AboutPage.vue";
 import QuizSelectionPage from "../views/QuizSelectionPage.vue";
+import LoginPage from "../views/LoginPage.vue";
+import ProfilePage from "../views/ProfilePage.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -16,7 +18,9 @@ const router = createRouter({
     { path: "/result", name: "result", component: ResultPage },
     { path: "/admin", name: "admin", component: AdminPage },
     { path: "/about", name: "about", component: AboutPage },
-    { path: "/select-quiz", name: "QuizSelection", component: QuizSelectionPage }
+    { path: "/select-quiz", name: "QuizSelection", component: QuizSelectionPage },
+    { path: "/login", name: "Login", component: LoginPage },
+    { path: "/profile", name: "Profile", component: ProfilePage },
   ],
 });
 
